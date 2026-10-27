@@ -117,5 +117,27 @@ describe('LibraryPage - Tự kiểm tra Phần 1', () => {
 
     expect(usePlayerStore.getState().queue.length).toBe(1);
   });
+
+  it('chọn playlist và bấm + Playlist thêm bài hát vào playlist', () => {
+    const handleAddToPlaylist = vi.fn();
+    const mockPlaylists = [{ id: 'pl-run', name: 'Chạy bộ' }];
+
+    render(
+      <LibraryPage
+        playlists={mockPlaylists}
+        selectedPlaylistId="pl-run"
+        onAddToPlaylist={handleAddToPlaylist}
+      />
+    );
+
+    const addPlaylistBtns = screen.getAllByRole('button', { name: '+ Playlist' });
+    expect(addPlaylistBtns[0]).not.toBeDisabled();
+
+    fireEvent.click(addPlaylistBtns[0]);
+    expect(handleAddToPlaylist).toHaveBeenCalledTimes(1);
+    expect(handleAddToPlaylist).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 's1' })
+    );
+  });
 });
 

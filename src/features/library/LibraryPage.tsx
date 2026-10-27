@@ -1,10 +1,14 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useContext } from 'react';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import { Song, SortOption } from '../../types';
 import { initialSongs, GENRES } from '../../data/songs';
 import { useDebounce } from '../../hooks/useDebounce';
 import { usePlayerStore } from '../player/usePlayerStore';
 import { useFavoritesStore } from '../favorites/useFavoritesStore';
+import {
+  PlaylistStateContext,
+  PlaylistDispatchContext,
+} from '../playlists/PlaylistContext';
 import { SongRow } from './SongRow';
 
 export interface LibraryPageProps {
@@ -55,13 +59,14 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   isFavorite,
   onAddToQueue,
   onAddToPlaylist,
-  selectedPlaylistId,
+  selectedPlaylistId: propSelectedPlaylistId,
   onSelectPlaylist,
-  playlists = [],
+  playlists: propPlaylists,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [sortOption, setSortOption] = useState<SortOption>('default');
+  const [localSelectedPlaylistId, setLocalSelectedPlaylistId] = useState<string>('');
 
   const debouncedSearch = useDebounce(searchTerm, 300);
 
@@ -70,6 +75,16 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const storeAddToQueue = usePlayerStore((s) => s.addToQueue);
   const favoriteIds = useFavoritesStore((s) => s.ids);
   const storeToggleFavorite = useFavoritesStore((s) => s.toggle);
+
+  // Playlists Context (tùy chọn khi chạy độc lập hoặc qua Provider)
+  const contextPlaylists = useContext(PlaylistStateContext);
+  const contextDispatch = useContext(PlaylistDispatchContext);
+
+  const availablePlaylists = propPlaylists ?? contextPlaylists ?? [];
+  const currentSelectedPlaylistId =
+    propSelectedPlaylistId !== undefined
+      ? propSelectedPlaylistId
+      : localSelectedPlaylistId;
 
   // Tối ưu render: kết quả lọc + sắp xếp tính bằng useMemo (sắp xếp trên bản sao mảng, tên dùng localeCompare(b, "vi"))
   const filteredAndSortedSongs = useMemo(() => {
@@ -133,12 +148,31 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
     [onAddToQueue, storeAddToQueue]
   );
 
+  // Thêm bài vào playlist: mỗi dòng có nút + Playlist thêm bài vào playlist đang chọn (chưa có playlist nào thì nút bị khóa)
   const handleAddToPlaylist = useCallback(
     (song: Song) => {
-      onAddToPlaylist?.(song);
+      if (onAddToPlaylist) {
+        onAddToPlaylist(song);
+      } else if (currentSelectedPlaylistId && contextDispatch) {
+        contextDispatch({
+          type: 'addSong',
+          payload: {
+            playlistId: currentSelectedPlaylistId,
+            songId: song.id,
+          },
+        });
+      }
     },
-    [onAddToPlaylist]
+    [onAddToPlaylist, currentSelectedPlaylistId, contextDispatch]
   );
+
+  const handleSelectPlaylistChange = (playlistId: string) => {
+    if (onSelectPlaylist) {
+      onSelectPlaylist(playlistId);
+    } else {
+      setLocalSelectedPlaylistId(playlistId);
+    }
+  };
 
   const checkIsFavorite = useCallback(
     (songId: string) => {
@@ -162,7 +196,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
       isFavorite: checkIsFavorite,
       onAddToQueue: handleAddToQueue,
       onAddToPlaylist: handleAddToPlaylist,
-      selectedPlaylistId,
+      selectedPlaylistId: currentSelectedPlaylistId,
     }),
     [
       filteredAndSortedSongs,
@@ -171,7 +205,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
       checkIsFavorite,
       handleAddToQueue,
       handleAddToPlaylist,
-      selectedPlaylistId,
+      currentSelectedPlaylistId,
     ]
   );
 
@@ -220,23 +254,22 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
           </select>
         </div>
 
-        {playlists.length > 0 && onSelectPlaylist && (
-          <div className="control-group">
-            <label htmlFor="playlist-select">Playlist đang chọn</label>
-            <select
-              id="playlist-select"
-              value={selectedPlaylistId || ''}
-              onChange={(e) => onSelectPlaylist(e.target.value)}
-            >
-              <option value="">-- Chọn playlist --</option>
-              {playlists.map((pl) => (
-                <option key={pl.id} value={pl.id}>
-                  {pl.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* Ô chọn Playlist đang chọn */}
+        <div className="control-group">
+          <label htmlFor="playlist-select">Playlist đang chọn</label>
+          <select
+            id="playlist-select"
+            value={currentSelectedPlaylistId || ''}
+            onChange={(e) => handleSelectPlaylistChange(e.target.value)}
+          >
+            <option value="">-- Chọn playlist --</option>
+            {availablePlaylists.map((pl) => (
+              <option key={pl.id} value={pl.id}>
+                {pl.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="results-info">

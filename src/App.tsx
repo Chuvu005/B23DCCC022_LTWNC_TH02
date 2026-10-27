@@ -2,6 +2,8 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import LibraryPage from './features/library/LibraryPage';
 import PlayerBar from './features/player/PlayerBar';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { PlaylistProvider } from './features/playlists/PlaylistContext';
 
 // Lazy load theo route: 3 trang /favorites, /playlists, /playlists/:id dùng React.lazy
 const FavoritesPage = lazy(() => import('./features/favorites/FavoritesPage'));
@@ -9,6 +11,8 @@ const PlaylistsPage = lazy(() => import('./features/playlists/PlaylistsPage'));
 const PlaylistDetailPage = lazy(() => import('./features/playlists/PlaylistDetailPage'));
 
 export const AppContent: React.FC = () => {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -44,6 +48,16 @@ export const AppContent: React.FC = () => {
           >
             Playlist
           </NavLink>
+
+          {/* Nút Giao diện tối/Giao diện sáng trên thanh menu */}
+          <button
+            type="button"
+            className="btn-theme-toggle"
+            onClick={toggleTheme}
+            aria-label="Đổi giao diện"
+          >
+            {theme === 'light' ? 'Giao diện tối' : 'Giao diện sáng'}
+          </button>
         </nav>
       </header>
 
@@ -66,9 +80,13 @@ export const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ThemeProvider>
+      <PlaylistProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </PlaylistProvider>
+    </ThemeProvider>
   );
 };
 
