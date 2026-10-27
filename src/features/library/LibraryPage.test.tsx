@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { LibraryPage } from './LibraryPage';
+import { usePlayerStore, initialPlayerState } from '../player/usePlayerStore';
 
 describe('LibraryPage - Tự kiểm tra Phần 1', () => {
   beforeEach(() => {
@@ -81,6 +82,40 @@ describe('LibraryPage - Tự kiểm tra Phần 1', () => {
 
     // Dòng đầu tiên trong danh sách ảo hóa sẽ là Biển bình yên 1
     expect(screen.getByText('Biển bình yên 1')).toBeInTheDocument();
+  });
+
+  it('gõ "mưa", bấm Phát ở dòng đầu, bấm Sau: bài tiếp theo vẫn là một bài có chữ "Mưa"', () => {
+    render(<LibraryPage />);
+
+    const searchInput = screen.getByLabelText('Tìm kiếm');
+    fireEvent.change(searchInput, { target: { value: 'mưa' } });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    // Bấm Phát ở dòng đầu tiên
+    const playButtons = screen.getAllByRole('button', { name: 'Phát' });
+    fireEvent.click(playButtons[0]);
+
+    const playerStore = usePlayerStore.getState();
+    expect(playerStore.isPlaying).toBe(true);
+    expect(playerStore.queue.length).toBe(1250);
+    expect(playerStore.queue[playerStore.currentIndex].title).toContain('Mưa');
+
+    // Bấm Sau
+    playerStore.next();
+    const updatedStore = usePlayerStore.getState();
+    expect(updatedStore.queue[updatedStore.currentIndex].title).toContain('Mưa');
+  });
+
+  it('bấm + Hàng đợi thêm bài vào hàng đợi', () => {
+    usePlayerStore.setState(initialPlayerState);
+    render(<LibraryPage />);
+
+    const queueButtons = screen.getAllByRole('button', { name: '+ Hàng đợi' });
+    fireEvent.click(queueButtons[0]);
+
+    expect(usePlayerStore.getState().queue.length).toBe(1);
   });
 });
 

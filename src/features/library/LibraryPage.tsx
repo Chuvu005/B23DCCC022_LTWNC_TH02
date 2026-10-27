@@ -3,6 +3,8 @@ import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import { Song, SortOption } from '../../types';
 import { initialSongs, GENRES } from '../../data/songs';
 import { useDebounce } from '../../hooks/useDebounce';
+import { usePlayerStore } from '../player/usePlayerStore';
+import { useFavoritesStore } from '../favorites/useFavoritesStore';
 import { SongRow } from './SongRow';
 
 export interface LibraryPageProps {
@@ -63,6 +65,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
   const debouncedSearch = useDebounce(searchTerm, 300);
 
+  // Zustand hooks qua selector riêng
+  const storePlayQueue = usePlayerStore((s) => s.playQueue);
+  const storeAddToQueue = usePlayerStore((s) => s.addToQueue);
+  const favoriteIds = useFavoritesStore((s) => s.ids);
+  const storeToggleFavorite = useFavoritesStore((s) => s.toggle);
+
   // Tối ưu render: kết quả lọc + sắp xếp tính bằng useMemo (sắp xếp trên bản sao mảng, tên dùng localeCompare(b, "vi"))
   const filteredAndSortedSongs = useMemo(() => {
     let result = songs;
@@ -89,25 +97,40 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
     return result;
   }, [songs, debouncedSearch, selectedGenre, sortOption]);
 
+  // Bấm Phát ở một dòng → hàng đợi là danh sách đang hiển thị (đã lọc, đã sắp xếp), bắt đầu từ bài đó
   const handlePlay = useCallback(
     (song: Song) => {
-      onPlaySong?.(song, filteredAndSortedSongs);
+      if (onPlaySong) {
+        onPlaySong(song, filteredAndSortedSongs);
+      } else {
+        const startIndex = filteredAndSortedSongs.findIndex((s) => s.id === song.id);
+        storePlayQueue(filteredAndSortedSongs, startIndex >= 0 ? startIndex : 0);
+      }
     },
-    [onPlaySong, filteredAndSortedSongs]
+    [onPlaySong, filteredAndSortedSongs, storePlayQueue]
   );
 
   const handleToggleFavorite = useCallback(
     (songId: string) => {
-      onToggleFavorite?.(songId);
+      if (onToggleFavorite) {
+        onToggleFavorite(songId);
+      } else {
+        storeToggleFavorite(songId);
+      }
     },
-    [onToggleFavorite]
+    [onToggleFavorite, storeToggleFavorite]
   );
 
+  // Bấm + Hàng đợi → thêm bài vào cuối hàng đợi
   const handleAddToQueue = useCallback(
     (song: Song) => {
-      onAddToQueue?.(song);
+      if (onAddToQueue) {
+        onAddToQueue(song);
+      } else {
+        storeAddToQueue(song);
+      }
     },
-    [onAddToQueue]
+    [onAddToQueue, storeAddToQueue]
   );
 
   const handleAddToPlaylist = useCallback(
@@ -119,9 +142,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
   const checkIsFavorite = useCallback(
     (songId: string) => {
-      return isFavorite ? isFavorite(songId) : false;
+      if (isFavorite) {
+        return isFavorite(songId);
+      }
+      return favoriteIds.includes(songId);
     },
-    [isFavorite]
+    [isFavorite, favoriteIds]
   );
 
   const itemKey = useCallback((index: number, data: ItemData) => {

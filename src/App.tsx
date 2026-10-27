@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import LibraryPage from './features/library/LibraryPage';
+import PlayerBar from './features/player/PlayerBar';
 
 // Lazy load theo route: 3 trang /favorites, /playlists, /playlists/:id dùng React.lazy
 const FavoritesPage = lazy(() => import('./features/favorites/FavoritesPage'));
@@ -56,6 +57,9 @@ export const AppContent: React.FC = () => {
           </Routes>
         </Suspense>
       </main>
+
+      {/* Thanh phát nhạc (PlayerBar) cố định ở đáy mọi trang */}
+      <PlayerBar />
     </div>
   );
 };
