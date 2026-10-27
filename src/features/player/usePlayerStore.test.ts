@@ -107,5 +107,26 @@ describe('usePlayerStore', () => {
     usePlayerStore.getState().addToQueue(mockSongs[0]);
     expect(usePlayerStore.getState().queue.length).toBe(2);
   });
+
+  it('thử thách thêm: bật shuffle chuyển bài ngẫu nhiên và repeat lặp lại', () => {
+    usePlayerStore.getState().playQueue(mockSongs, 0);
+
+    // Toggle shuffle
+    usePlayerStore.getState().toggleShuffle();
+    expect(usePlayerStore.getState().isShuffle).toBe(true);
+
+    // Toggle repeat: off -> all -> one -> off
+    expect(usePlayerStore.getState().repeatMode).toBe('off');
+    usePlayerStore.getState().toggleRepeat();
+    expect(usePlayerStore.getState().repeatMode).toBe('all');
+    usePlayerStore.getState().toggleRepeat();
+    expect(usePlayerStore.getState().repeatMode).toBe('one');
+
+    // Ở chế độ repeat 'one', next() sẽ tua lại về 0 của bài hiện tại
+    usePlayerStore.setState({ position: 20 });
+    usePlayerStore.getState().next();
+    expect(usePlayerStore.getState().currentIndex).toBe(0);
+    expect(usePlayerStore.getState().position).toBe(0);
+  });
 });
 

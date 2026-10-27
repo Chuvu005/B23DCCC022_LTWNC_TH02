@@ -116,5 +116,32 @@ describe('PlayerBar', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('0:00 / 3:07')).toBeInTheDocument();
   });
+
+  it('thử thách thêm: bấm phím Space để Phát/Tạm dừng và bỏ qua khi đang gõ trong input', () => {
+    render(
+      <div>
+        <input data-testid="test-input" />
+        <PlayerBar />
+      </div>
+    );
+
+    act(() => {
+      usePlayerStore.getState().playQueue(mockSongs, 0);
+    });
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    // Bấm Space ngoài input -> chuyển sang tạm dừng
+    fireEvent.keyDown(window, { code: 'Space' });
+    expect(usePlayerStore.getState().isPlaying).toBe(false);
+
+    // Bấm Space lại -> chuyển sang phát
+    fireEvent.keyDown(window, { code: 'Space' });
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    // Bấm Space khi đang gõ trong input -> không bị can thiệp togglePlay
+    const input = screen.getByTestId('test-input');
+    fireEvent.keyDown(input, { code: 'Space' });
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+  });
 });
 

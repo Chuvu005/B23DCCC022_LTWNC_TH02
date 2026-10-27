@@ -11,10 +11,15 @@ export const PlayerBar: React.FC = () => {
   );
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const queueLength = usePlayerStore((s) => s.queue.length);
+  const isShuffle = usePlayerStore((s) => s.isShuffle);
+  const repeatMode = usePlayerStore((s) => s.repeatMode);
+
   const togglePlay = usePlayerStore((s) => s.togglePlay);
   const next = usePlayerStore((s) => s.next);
   const prev = usePlayerStore((s) => s.prev);
   const tick = usePlayerStore((s) => s.tick);
+  const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
+  const toggleRepeat = usePlayerStore((s) => s.toggleRepeat);
 
   // Đồng hồ: một useEffect dùng setInterval 1000ms gọi tick(), chỉ chạy khi isPlaying; cleanup bằng clearInterval
   useEffect(() => {
@@ -24,6 +29,31 @@ export const PlayerBar: React.FC = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [isPlaying, tick]);
+
+  // Thử thách thêm: Phím tắt Space để Phát/Tạm dừng (nhớ removeEventListener khi unmount và bỏ qua khi đang gõ)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        const target = e.target as HTMLElement;
+        const tagName = target?.tagName?.toLowerCase();
+        if (
+          tagName === 'input' ||
+          tagName === 'textarea' ||
+          tagName === 'select' ||
+          target?.isContentEditable
+        ) {
+          return;
+        }
+        e.preventDefault();
+        togglePlay();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [togglePlay]);
 
   return (
     <footer className="player-bar" data-testid="player-bar">
@@ -37,6 +67,15 @@ export const PlayerBar: React.FC = () => {
 
       <div className="player-center-controls">
         <div className="player-buttons">
+          <button
+            type="button"
+            className={`player-btn btn-mode ${isShuffle ? 'active-mode' : ''}`}
+            onClick={toggleShuffle}
+            aria-label="Phát ngẫu nhiên"
+            title="Phát ngẫu nhiên"
+          >
+            🔀
+          </button>
           <button
             type="button"
             className="player-btn btn-prev"
@@ -61,6 +100,15 @@ export const PlayerBar: React.FC = () => {
           >
             Sau
           </button>
+          <button
+            type="button"
+            className={`player-btn btn-mode ${repeatMode !== 'off' ? 'active-mode' : ''}`}
+            onClick={toggleRepeat}
+            aria-label={`Lặp lại: ${repeatMode}`}
+            title={`Lặp lại: ${repeatMode}`}
+          >
+            {repeatMode === 'one' ? '🔂' : '🔁'}
+          </button>
         </div>
 
         <ProgressBar />
@@ -76,4 +124,3 @@ export const PlayerBar: React.FC = () => {
 };
 
 export default PlayerBar;
-

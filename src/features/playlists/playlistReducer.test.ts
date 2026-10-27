@@ -60,5 +60,23 @@ describe('playlistReducer', () => {
     const newState = playlistReducer(initialPlaylists, action);
     expect(newState).toEqual(initialPlaylists);
   });
+
+  it('đổi tên playlist (rename)', () => {
+    const action = {
+      type: 'rename' as const,
+      payload: { id: 'pl-1', name: 'Nhạc thư giãn' },
+    };
+    const newState = playlistReducer(initialPlaylists, action);
+    expect(newState[0].name).toBe('Nhạc thư giãn');
+  });
+
+  it('cập nhật danh sách playlist (set)', () => {
+    const action = {
+      type: 'set' as const,
+      payload: [],
+    };
+    const newState = playlistReducer(initialPlaylists, action);
+    expect(newState).toEqual([]);
+  });
 });
 
